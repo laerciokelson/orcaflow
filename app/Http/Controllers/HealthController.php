@@ -13,15 +13,15 @@ class HealthController extends Controller
     {
         $checks = [
             'database' => fn () => DB::select('SELECT 1'),
-            'redis' => fn () => Redis::connection()->ping(),
-            'storage' => fn () => is_dir(storage_path('app')) && is_writable(storage_path('app')),
+            'redis'    => fn () => Redis::connection()->ping(),
+            'storage'  => fn () => is_dir(storage_path('app')) && is_writable(storage_path('app')),
         ];
 
         $results = [];
 
         foreach ($checks as $name => $check) {
             try {
-                $result = $check();
+                $result         = $check();
                 $results[$name] = $result === false ? 'failed' : 'ok';
             } catch (Throwable) {
                 $results[$name] = 'failed';
