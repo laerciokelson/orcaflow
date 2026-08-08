@@ -1,0 +1,218 @@
+name: orcaflow
+
+x-php-service: &php-service
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    args:
+      APP_UID: ${APP_UID:-1000}
+      APP_GID: ${APP_GID:-1000}
+  image: orcaflow-php:dev
+  working_dir: /var/www/html
+  volumes:
+    - .:/var/www/html
+  networks:
+    - orcaflow
+  restart: unless-stopped
+
+x-app-environment: &app-environment
+  APP_ENV: local
+  APP_DEBUG: "true"
+  APP_URL: http://localhost:${APP_PORT:-8080}
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_PORT: 3306
+  DB_DATABASE: ${DB_DATABASE:-orcaflow}
+  DB_USERNAME: ${DB_USERNAME:-orcaflow}
+  DB_PASSWORD: ${DB_PASSWORD:-orcaflow}
+  REDIS_CLIENT: phpredis
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  CACHE_STORE: redis
+  QUEUE_CONNECTION: redis
+  SESSION_DRIVER: redis
+  MAIL_MAILER: smtp
+  MAIL_HOST: mailpit
+  MAIL_PORT: 1025
+
+services:
+  nginx:
+    image: nginx:1.28.0-alpine
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - orcaflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/up >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  app:
+    <<: *php-service
+    environment:
+      <<: *app-environment
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    image: orcaflow-node:dev
+    working_dir: /var/www/html
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      HOME: /tmp
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    volumes:
+      - .:/var/www/html
+    networks:
+      - orcaflow
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4.6
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-orcaflow}
+      MYSQL_USER: ${DB_USERNAME:-orcaflow}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-orcaflow}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      TZ: Europe/Lisbon
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - orcaflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.2.1-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - orcaflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  queue:
+    <<: *php-service
+    command: php artisan queue:work --sleep=1 --tries=3 --timeout=90
+    environment:
+      <<: *app-environment
+    depends_on:
+      app:
+        condition: service_healthy
+
+  scheduler:
+    <<: *php-service
+    command: php artisan schedule:work
+    environment:
+      <<: *app-environment
+    depends_on:
+      app:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.27.8
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"
+    networks:
+      - orcaflow
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  app-e2e:
+    <<: *php-service
+    profiles: ["e2e"]
+    environment:
+      <<: *app-environment
+      APP_ENV: e2e
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:${E2E_PORT:-8081}
+      DB_DATABASE: orcaflow_test
+      REDIS_DB: 10
+      REDIS_CACHE_DB: 11
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm -t >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nginx-e2e:
+    image: nginx:1.28.0-alpine
+    profiles: ["e2e"]
+    ports:
+      - "${E2E_PORT:-8081}:80"
+    volumes:
+      - .:/var/www/html:ro
+      - ./docker/nginx/e2e.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app-e2e:
+        condition: service_healthy
+    networks:
+      - orcaflow
+
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    profiles: ["e2e"]
+    working_dir: /var/www/html
+    command: npm run test:e2e
+    environment:
+      CI: ${CI:-}
+      E2E_BASE_URL: http://nginx-e2e
+      HOME: /tmp
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      nginx-e2e:
+        condition: service_started
+    networks:
+      - orcaflow
+
+networks:
+  orcaflow:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
