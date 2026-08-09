@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup up down restart shell migrate wayfinder test test-backend test-frontend test-e2e lint analyse quality logs
+.PHONY: help setup up down restart shell migrate wayfinder test test-backend test-frontend test-e2e lint analyse quality clean-quality-artifacts quality-clean logs
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -68,6 +68,11 @@ analyse: wayfinder ## Executa Larastan nível 7 e TypeScript strict
 
 quality: lint analyse test ## Executa todos os checks exceto E2E
 	docker compose run --rm --no-deps node npm run build
+
+clean-quality-artifacts:
+	rm -rf public/build public/hot public/fonts-manifest.dev.json resources/js/actions resources/js/routes resources/js/wayfinder
+
+quality-clean: clean-quality-artifacts quality ## Simula os quality checks a partir de artefactos limpos
 
 logs: ## Segue os logs dos serviços
 	docker compose logs -f --tail=200

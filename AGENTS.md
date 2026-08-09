@@ -47,15 +47,20 @@
 - Testes backend usam MySQL real; SQLite não substitui MySQL.
 - Bases destrutíveis de teste terminam obrigatoriamente em `_test` e usam ambiente `testing` ou `e2e`. Redis de testes usa bases lógicas isoladas.
 - Testes devem ser proporcionais ao risco e às alterações. Não exigir Playwright para mudanças que não afetem interface ou fluxos web.
-- Executar `make quality` antes de concluir qualquer tarefa. Alterações a fluxos web críticos também exigem `make test-e2e`.
+- Executar `make quality` durante o desenvolvimento e antes de concluir qualquer tarefa.
+- Executar `make quality-clean` antes de push ou abertura/atualização de Pull Request, quando disponível, para validar o projeto sem depender de artefactos gerados anteriormente.
+- Alterações a fluxos web críticos também exigem `make test-e2e`.
 
 ### Artefactos gerados e paridade com CI
 
 - Gerar explicitamente qualquer artefacto necessário para lint, análise estática, typecheck, testes ou build antes de executar esses checks.
-- Não assumir que artefactos presentes no ambiente local existirão num clone limpo ou na CI.
-- Garantir que os quality checks locais e da CI possuem as mesmas pré-condições e, sempre que possível, executam os mesmos comandos.
+- Não assumir que builds, caches, ficheiros não versionados ou outros artefactos presentes no workspace existirão num clone limpo ou na CI.
+- Garantir que os quality checks locais e da CI possuem as mesmas pré-condições e, sempre que possível, executam os mesmos comandos e ordem. Refletir localmente alterações às pré-condições da CI quando aplicável.
+- A CI não deve ser a primeira vez que um erro reproduzível localmente é descoberto. Quando um erro surgir apenas num clone limpo ou na CI, ajustar o fluxo local para o detetar antes do push.
 - Os módulos gerados pelo Wayfinder devem existir antes da execução do ESLint, TypeScript typecheck ou qualquer outro check que dependa de `@/routes` ou `@/actions`.
 - Não versionar artefactos gerados quando estes forem intencionalmente tratados pelo projeto como ficheiros gerados durante a preparação, desenvolvimento ou build.
+- Testes backend não devem depender de artefactos frontend previamente gerados, salvo quando essa integração fizer explicitamente parte do comportamento testado.
+- Limpezas que simulem um ambiente limpo devem atuar apenas sobre artefactos seguros e regeneráveis; nunca sobre `.env`, bases de dados, volumes, uploads, storage persistente ou dados do utilizador.
 
 ## UI/UX
 

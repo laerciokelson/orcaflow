@@ -13,6 +13,8 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        $this->withoutVite();
+
         $database = (string) config('database.connections.mysql.database');
 
         if (! app()->environment('testing') || ! Str::endsWith($database, '_test')) {
