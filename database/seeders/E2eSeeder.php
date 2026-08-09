@@ -18,10 +18,10 @@ class E2eSeeder extends Seeder
         }
 
         User::factory()->create([
-            'name' => 'OrçaFlow E2E',
-            'email' => 'e2e@orcaflow.test',
+            'name'              => 'OrçaFlow E2E',
+            'email'             => 'e2e@orcaflow.test',
             'email_verified_at' => now(),
-            'password' => 'password',
+            'password'          => 'password',
         ]);
     }
 }

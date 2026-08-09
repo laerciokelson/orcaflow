@@ -15,8 +15,8 @@ test('the readiness endpoint checks required infrastructure', function () {
             'status' => 'ready',
             'checks' => [
                 'database' => 'ok',
-                'redis' => 'ok',
-                'storage' => 'ok',
+                'redis'    => 'ok',
+                'storage'  => 'ok',
             ],
         ]);
 });

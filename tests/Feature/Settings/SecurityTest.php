@@ -29,8 +29,8 @@ class SecurityTest extends TestCase
             ->actingAs($user)
             ->from(route('security.edit'))
             ->put(route('user-password.update'), [
-                'current_password' => 'password',
-                'password' => 'new-password',
+                'current_password'      => 'password',
+                'password'              => 'new-password',
                 'password_confirmation' => 'new-password',
             ]);
 
@@ -49,8 +49,8 @@ class SecurityTest extends TestCase
             ->actingAs($user)
             ->from(route('security.edit'))
             ->put(route('user-password.update'), [
-                'current_password' => 'wrong-password',
-                'password' => 'new-password',
+                'current_password'      => 'wrong-password',
+                'password'              => 'new-password',
                 'password_confirmation' => 'new-password',
             ]);
 

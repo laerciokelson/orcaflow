@@ -1,44 +1,96 @@
 # OrçaFlow — regras do projeto
 
+## Idioma
+
+- Escrever instruções e documentação interna em português.
+- Usar português de Portugal nos textos apresentados ao utilizador, salvo requisito contrário.
+- Manter em inglês os nomes técnicos no código, incluindo classes, métodos, propriedades, variáveis, tabelas, colunas, enums e rotas técnicas quando apropriado.
+- Não traduzir nomes técnicos apenas para cumprir a regra de idioma.
+
 ## Arquitetura e stack
 
-- Monólito Laravel 13, PHP 8.4, React 19, TypeScript, Inertia 3 e Tailwind CSS 4.
-- MySQL 8.4 é a fonte de verdade. Redis, através de `phpredis`, suporta cache, sessões e filas.
-- A aplicação é single-tenant por instalação: cada empresa tem infraestrutura e instalação independentes.
-- Manter a estrutura convencional do Laravel. Não criar microserviços, API REST separada, multi-tenancy ou arquitetura artificial de Domains/Modules.
+- Manter um monólito Laravel 13 e PHP 8.4, com React 19, TypeScript, Inertia 3 e Tailwind CSS 4 no frontend.
+- Cada empresa possui uma instalação e infraestrutura Docker independentes. A aplicação é single-tenant por instalação; não implementar multi-tenancy.
+- MySQL 8.4 é a fonte de verdade. Redis, através de `phpredis`, suporta cache, sessões e filas, mas não é fonte de verdade.
+- Manter a estrutura convencional do Laravel. Não criar microserviços, API REST separada sem necessidade concreta nem arquitetura artificial de Domains/Modules.
+- Evitar abstrações prematuras e implementar apenas o âmbito da Issue atual.
 - Usar Laravel Storage para ficheiros. A lógica da aplicação não deve depender de caminhos locais; o disco inicial é local e deve poder mudar futuramente para storage S3-compatible.
 
-## Regras de desenvolvimento
+## Workflow
 
-- Validar input com Form Requests e autorizar operações com Policies.
+1. Ler integralmente a Issue e este `AGENTS.md`.
+2. Inspecionar o código existente e apresentar um plano curto antes de alterar ficheiros.
+3. Implementar apenas o âmbito pedido, sem antecipar Issues futuras.
+4. Adicionar ou atualizar testes proporcionais ao risco e ao comportamento alterado.
+5. Executar os quality checks relevantes e informar os resultados reais.
+
+- Não inventar regras de negócio ausentes. Perante uma decisão funcional relevante não especificada, parar e pedir esclarecimento.
+- Não fazer commit ou push, salvo pedido explícito.
+
+## PHP e desenho da aplicação
+
+- Seguir PSR-12. Laravel Pint é a source of truth para formatação PHP e o `pint.json` é configuração obrigatória.
+- As regras adicionais de alinhamento de `=` e `=>` pertencem ao `pint.json`; não fazer alinhamentos manuais que entrem em conflito com o formatter.
+- Executar Pint depois de alterações PHP e antes de concluir cada tarefa.
+- Validar input HTTP com Form Requests e autorizar operações com Policies.
 - Manter controllers pequenos.
 - Criar Actions quando existir um caso de uso de negócio relevante.
 - Criar Services apenas quando existir comportamento genuinamente reutilizável.
-- Não criar repositories genéricos nem abstrações preventivas.
-- Não implementar fora do âmbito do issue.
-- Nunca usar `float` para dinheiro.
-- Armazenar futuros valores monetários em unidades monetárias mínimas usando inteiros/BIGINT. Exemplo: `1234.56 EUR` torna-se `123456` cêntimos.
-- Percentagens, incluindo taxas de IVA, são conceitos separados e não são valores monetários.
+- Não criar repositories genéricos nem abstrações preventivas sem necessidade concreta.
+- Nunca usar `float` para valores monetários do domínio. Armazená-los como inteiros/BIGINT em unidades monetárias mínimas; por exemplo, `1234.56 EUR` corresponde a `123456` cêntimos.
+- Tratar percentagens, incluindo taxas de IVA, como conceitos separados de valores monetários.
 
-## Regras de testes e qualidade
+## Testes e qualidade
 
-- Regras relevantes exigem testes.
+- Usar Pest para testes backend, Vitest e React Testing Library para lógica e componentes frontend, e Playwright para fluxos E2E importantes.
+- Usar Larastan nível 7 para análise estática PHP. Não criar baselines nem ignorar erros para os esconder num projeto novo.
 - Testes backend usam MySQL real; SQLite não substitui MySQL.
-- Bases destrutíveis de teste terminam obrigatoriamente em `_test` e usam ambiente `testing` ou `e2e`.
-- Redis de testes usa bases lógicas isoladas.
-- Executar os quality checks relevantes antes de concluir uma tarefa. A verificação completa é `make quality`; alterações a fluxos web críticos também exigem `make test-e2e`.
-- Não criar baselines ou ignorar erros apenas para fazer Larastan passar.
+- Bases destrutíveis de teste terminam obrigatoriamente em `_test` e usam ambiente `testing` ou `e2e`. Redis de testes usa bases lógicas isoladas.
+- Testes devem ser proporcionais ao risco e às alterações. Não exigir Playwright para mudanças que não afetem interface ou fluxos web.
+- Executar `make quality` durante o desenvolvimento e antes de concluir qualquer tarefa.
+- Executar `make quality-clean` antes de push ou abertura/atualização de Pull Request, quando disponível, para validar o projeto sem depender de artefactos gerados anteriormente.
+- Alterações a fluxos web críticos também exigem `make test-e2e`.
+
+### Artefactos gerados e paridade com CI
+
+- Gerar explicitamente qualquer artefacto necessário para lint, análise estática, typecheck, testes ou build antes de executar esses checks.
+- Não assumir que builds, caches, ficheiros não versionados ou outros artefactos presentes no workspace existirão num clone limpo ou na CI.
+- Garantir que os quality checks locais e da CI possuem as mesmas pré-condições e, sempre que possível, executam os mesmos comandos e ordem. Refletir localmente alterações às pré-condições da CI quando aplicável.
+- A CI não deve ser a primeira vez que um erro reproduzível localmente é descoberto. Quando um erro surgir apenas num clone limpo ou na CI, ajustar o fluxo local para o detetar antes do push.
+- Os módulos gerados pelo Wayfinder devem existir antes da execução do ESLint, TypeScript typecheck ou qualquer outro check que dependa de `@/routes` ou `@/actions`.
+- Não versionar artefactos gerados quando estes forem intencionalmente tratados pelo projeto como ficheiros gerados durante a preparação, desenvolvimento ou build.
+- Testes backend não devem depender de artefactos frontend previamente gerados, salvo quando essa integração fizer explicitamente parte do comportamento testado.
+- Limpezas que simulem um ambiente limpo devem atuar apenas sobre artefactos seguros e regeneráveis; nunca sobre `.env`, bases de dados, volumes, uploads, storage persistente ou dados do utilizador.
+
+## UI/UX
+
+- Criar layouts clean, modernos e profissionais, com boa hierarquia visual, espaçamento consistente e baixa densidade visual.
+- Usar uma base visual neutra e reservar cores vivas sobretudo para ações principais, estados, alertas, feedback e métricas importantes.
+- Manter contraste e acessibilidade; nunca transmitir significado apenas através da cor, combinando-a com texto, ícone ou badge.
+- Usar shadcn/ui como base quando existir um componente adequado. Não duplicar componentes visuais e manter consistência entre formulários, botões, tabelas, cards, dialogs, drawers, badges e restantes elementos.
+- Evitar gradientes, sombras excessivas e efeitos meramente decorativos.
+
+### Responsividade obrigatória
+
+- Todos os ecrãs devem ser responsivos. Uma funcionalidade frontend não está concluída se funcionar apenas em desktop.
+- Considerar e validar desktop, tablet, mobile e os principais breakpoints antes de concluir uma tarefa frontend.
+- Evitar larguras fixas que provoquem overflow. Formulários devem adaptar o número de colunas e grids devem reorganizar-se conforme o viewport.
+- Definir uma estratégia responsiva para tabelas, como scroll horizontal controlado, apresentação alternativa ou ocultação apenas de informação secundária.
+- Não esconder conteúdo importante apenas para fazer o layout caber.
+- Garantir que dialogs e drawers não ultrapassam o viewport e que a navegação permanece utilizável em mobile.
+- Não fazer ações essenciais dependerem exclusivamente de hover e dimensionar áreas interativas para utilização touch.
 
 ## Regras conhecidas para desenvolvimento futuro
 
-Estas regras são documentação; não devem ser implementadas sem um issue próprio:
+Estas regras são apenas documentação e não devem ser implementadas sem uma Issue própria:
 
 - Materiais e mão de obra são apresentados separadamente.
 - Custos e margens são internos e nunca apresentados ao cliente.
-- Cada item do orçamento pode ter uma taxa de IVA diferente.
-- Preços, custos, descrições e taxas dos orçamentos são snapshots.
-- Orçamentos enviados não podem ser alterados silenciosamente; alterações exigem nova versão.
+- Diferentes itens do orçamento podem ter taxas de IVA diferentes.
+- Preços, custos, descrições, taxas e outros dados relevantes dos orçamentos são snapshots.
+- Um orçamento enviado não pode ser alterado silenciosamente; alterações relevantes exigem nova versão.
 - O cliente poderá fazer aprovação parcial.
 - O sinal é calculado sobre o valor efetivamente aprovado.
 - Ajudantes podem ser pagos por hora, dia ou valor fixo.
-- A aceitação será feita através de link seguro.
+- A aceitação do orçamento será feita através de link seguro.
+- Nesta fase, a aplicação não é software de faturação.

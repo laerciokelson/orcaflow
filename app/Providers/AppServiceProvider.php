@@ -34,13 +34,14 @@ class AppServiceProvider extends ServiceProvider
     {
         Date::use(CarbonImmutable::class);
 
-        $database = (string) config('database.connections.mysql.database');
+        $database             = (string) config('database.connections.mysql.database');
         $isolatedTestDatabase = app()->environment(['testing', 'e2e'])
             && Str::endsWith($database, '_test');
 
         DB::prohibitDestructiveCommands(! $isolatedTestDatabase);
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
+        Password::defaults(
+            fn (): ?Password => app()->isProduction()
             ? Password::min(12)
                 ->mixedCase()
                 ->letters()

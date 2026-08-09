@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 .DEFAULT_GOAL := help
 
-.PHONY: help setup up down restart shell migrate test test-backend test-frontend test-e2e lint analyse quality logs
+.PHONY: help setup up down restart shell migrate wayfinder test test-backend test-frontend test-e2e lint analyse quality clean-quality-artifacts quality-clean logs
 
 help:
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -33,6 +33,9 @@ shell: ## Abre uma shell no contentor PHP
 migrate: ## Executa apenas migrations pendentes
 	docker compose exec app php artisan migrate
 
+wayfinder: ## Gera os módulos TypeScript de rotas e actions
+	docker compose exec app php artisan wayfinder:generate --with-form --no-interaction
+
 test: test-backend test-frontend ## Executa testes backend e frontend
 
 test-backend: ## Executa Pest contra MySQL e Redis isolados
@@ -54,17 +57,22 @@ test-e2e: ## Recria apenas a base E2E e executa o smoke test Chromium
 	docker compose exec app-e2e php artisan migrate:fresh --force --seed --seeder=Database\\Seeders\\E2eSeeder
 	docker compose --profile e2e run --rm playwright
 
-lint: ## Verifica formatação PHP, ESLint e Prettier
+lint: wayfinder ## Verifica formatação PHP, ESLint e Prettier
 	docker compose exec app ./vendor/bin/pint --test --parallel
 	docker compose run --rm --no-deps node npm run lint:check
 	docker compose run --rm --no-deps node npm run format:check
 
-analyse: ## Executa Larastan nível 7 e TypeScript strict
+analyse: wayfinder ## Executa Larastan nível 7 e TypeScript strict
 	docker compose exec app ./vendor/bin/phpstan analyse --memory-limit=1G
 	docker compose run --rm --no-deps node npm run typecheck
 
 quality: lint analyse test ## Executa todos os checks exceto E2E
 	docker compose run --rm --no-deps node npm run build
+
+clean-quality-artifacts:
+	rm -rf public/build public/hot public/fonts-manifest.dev.json resources/js/actions resources/js/routes resources/js/wayfinder
+
+quality-clean: clean-quality-artifacts quality ## Simula os quality checks a partir de artefactos limpos
 
 logs: ## Segue os logs dos serviços
 	docker compose logs -f --tail=200

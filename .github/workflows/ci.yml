@@ -75,17 +75,25 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Generate Wayfinder
+        run: php artisan wayfinder:generate --with-form --no-interaction
+
+      - name: Verify Wayfinder output
+        run: |
+          test -s resources/js/routes/index.ts
+          test -s resources/js/actions/App/index.ts
+
       - name: Pint
         run: ./vendor/bin/pint --test --parallel
-
-      - name: Larastan
-        run: ./vendor/bin/phpstan analyse --memory-limit=1G
 
       - name: ESLint
         run: npm run lint:check
 
       - name: Prettier
         run: npm run format:check
+
+      - name: Larastan
+        run: ./vendor/bin/phpstan analyse --memory-limit=1G
 
       - name: TypeScript
         run: npm run typecheck
