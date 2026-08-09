@@ -49,6 +49,14 @@
 - Testes devem ser proporcionais ao risco e às alterações. Não exigir Playwright para mudanças que não afetem interface ou fluxos web.
 - Executar `make quality` antes de concluir qualquer tarefa. Alterações a fluxos web críticos também exigem `make test-e2e`.
 
+### Artefactos gerados e paridade com CI
+
+- Gerar explicitamente qualquer artefacto necessário para lint, análise estática, typecheck, testes ou build antes de executar esses checks.
+- Não assumir que artefactos presentes no ambiente local existirão num clone limpo ou na CI.
+- Garantir que os quality checks locais e da CI possuem as mesmas pré-condições e, sempre que possível, executam os mesmos comandos.
+- Os módulos gerados pelo Wayfinder devem existir antes da execução do ESLint, TypeScript typecheck ou qualquer outro check que dependa de `@/routes` ou `@/actions`.
+- Não versionar artefactos gerados quando estes forem intencionalmente tratados pelo projeto como ficheiros gerados durante a preparação, desenvolvimento ou build.
+
 ## UI/UX
 
 - Criar layouts clean, modernos e profissionais, com boa hierarquia visual, espaçamento consistente e baixa densidade visual.
