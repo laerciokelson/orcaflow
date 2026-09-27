@@ -24,8 +24,25 @@
 4. Adicionar ou atualizar testes proporcionais ao risco e ao comportamento alterado.
 5. Executar os quality checks relevantes e informar os resultados reais.
 
+### Issues, branches e Pull Requests
+
+- Cada unidade funcional deve corresponder, sempre que possível, a uma única GitHub Issue e a um único Pull Request.
+- A GitHub Issue é a fonte de verdade para o âmbito funcional da tarefa; não duplicar desnecessariamente a sua especificação noutras instruções.
+- Criar uma branch dedicada por Issue, usando preferencialmente o formato `<tipo>/<issue>-<descricao>`, por exemplo `feat/7-client-service-locations`.
+- O número usado no nome da branch deve corresponder ao número real da GitHub Issue.
+- O Pull Request deve corresponder à Issue implementada e incluir `Closes #<issue>` na descrição, para que a Issue seja encerrada automaticamente após o merge.
+- Não encerrar manualmente uma Issue antes do merge do respetivo Pull Request, salvo quando a Issue for cancelada ou deixar de ser aplicável.
+- O fluxo esperado no GitHub Project é: `Backlog` → `Ready` → `In progress` → `In review` → `Done`.
+- Mover para `In progress` quando o desenvolvimento da Issue começar.
+- Mover para `In review` quando o respetivo Pull Request estiver aberto e pronto para revisão.
+- `Done` representa trabalho integrado na branch principal; sempre que possível, a transição deve ocorrer automaticamente após o merge e encerramento da Issue.
+- Não usar Pull Requests como substitutos das Issues no planeamento do Project; a Issue representa o trabalho e o Pull Request representa a respetiva implementação.
+
+### Regras de execução
+
 - Não inventar regras de negócio ausentes. Perante uma decisão funcional relevante não especificada, parar e pedir esclarecimento.
 - Não fazer commit ou push, salvo pedido explícito.
+- Não fazer merge de Pull Requests, salvo pedido explícito.
 
 ## PHP e desenho da aplicação
 
